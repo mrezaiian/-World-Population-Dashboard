@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Plotly -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- کتابخانه XLSX برای خواندن فایل‌های اکسل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -82,9 +84,45 @@
             border-radius: 5px;
             margin-bottom: 20px;
         }
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
     </style>
 </head>
 <body>
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
     <header class="dashboard-header text-center">
         <div class="container">
             <h1 class="display-4 fw-bold">🌍 World Population Dashboard</h1>
@@ -97,11 +135,17 @@
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h5>📊 Explore Global Population Data</h5>
-                    <p class="mb-0">Select countries from the list to compare their population trends over time. Data is simulated for demonstration purposes.</p>
+                    <p class="mb-0">Upload your population data file or use the simulated data. Select countries to compare their population trends.</p>
                 </div>
                 <div class="col-md-4 text-md-end">
-                    <button class="btn btn-outline-primary" onclick="simulateDataLoad()">
-                        📁 Simulate Data Load
+                    <div class="file-input-container">
+                        <button class="btn btn-primary">
+                            📁 Upload Excel File
+                        </button>
+                        <input type="file" id="file-upload" accept=".xls,.xlsx,.csv" onchange="handleFileUpload(this.files)">
+                    </div>
+                    <button class="btn btn-outline-primary ms-2" onclick="simulateDataLoad()">
+                        📊 Use Simulated Data
                     </button>
                 </div>
             </div>
@@ -171,7 +215,7 @@
 
     <footer class="mt-5 py-3 text-center text-muted">
         <div class="container">
-            <p>World Population Dashboard &copy; 2023 | Simulated data for demonstration purposes</p>
+            <p>World Population Dashboard &copy; 2023 | Data source: population_cleaned.xls</p>
         </div>
     </footer>
 
@@ -181,12 +225,7 @@
     <script>
         // داده‌های نمونه (شبیه‌سازی شده)
         let populationData = {};
-        const availableCountries = [
-            "United States", "China", "India", "Brazil", "Nigeria", 
-            "Indonesia", "Pakistan", "Bangladesh", "Russia", "Mexico",
-            "Japan", "Ethiopia", "Philippines", "Egypt", "Vietnam",
-            "DR Congo", "Turkey", "Iran", "Germany", "Thailand"
-        ];
+        let availableCountries = [];
 
         // رنگ‌های ثابت برای هر کشور
         const countryColors = {
@@ -213,10 +252,124 @@
         };
 
         // کشورهای انتخاب شده
-        let selectedCountries = ["United States", "China", "India", "Brazil", "Nigeria"];
+        let selectedCountries = [];
 
-        // شبیه‌سازی بارگذاری داده از CSV
+        // نمایش/پنهان کردن لودینگ
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        // تابع برای پردازش فایل آپلود شده
+        function handleFileUpload(files) {
+            if (!files.length) return;
+            
+            showLoading(true);
+            
+            const file = files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // پردازش داده‌های اکسل
+                    processExcelData(workbook);
+                } catch (error) {
+                    console.error("Error processing file:", error);
+                    alert("Error processing file. Please make sure it's a valid Excel file.");
+                } finally {
+                    showLoading(false);
+                }
+            };
+            
+            reader.onerror = function() {
+                alert("Error reading file");
+                showLoading(false);
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        // پردازش داده‌های اکسل
+        function processExcelData(workbook) {
+            // فرض می‌کنیم داده‌ها در اولین شیت هستند
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            // پیدا کردن ردیف عنوان
+            let headerRowIndex = 0;
+            for (let i = 0; i < jsonData.length; i++) {
+                if (jsonData[i] && jsonData[i][0] && typeof jsonData[i][0] === 'string' && 
+                    (jsonData[i][0].toLowerCase().includes('country') || jsonData[i][0].toLowerCase().includes('year'))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+            
+            // استخراج نام کشورها از ردیف عنوان (به جز سلول اول)
+            availableCountries = [];
+            for (let i = 1; i < jsonData[headerRowIndex].length; i++) {
+                if (jsonData[headerRowIndex][i]) {
+                    availableCountries.push(jsonData[headerRowIndex][i]);
+                }
+            }
+            
+            // استخراج سال‌ها از ستون اول (به جز ردیف عنوان)
+            const years = [];
+            for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+                if (jsonData[i] && jsonData[i][0] !== undefined && jsonData[i][0] !== null) {
+                    // تبدیل به عدد در صورت امکان
+                    const year = typeof jsonData[i][0] === 'number' ? jsonData[i][0] : parseInt(jsonData[i][0]);
+                    if (!isNaN(year)) {
+                        years.push(year);
+                    }
+                }
+            }
+            
+            // پر کردن populationData
+            populationData = {};
+            availableCountries.forEach((country, colIndex) => {
+                populationData[country] = {};
+                for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+                    if (jsonData[i] && jsonData[i][0] !== undefined) {
+                        const year = typeof jsonData[i][0] === 'number' ? jsonData[i][0] : parseInt(jsonData[i][0]);
+                        if (!isNaN(year) && jsonData[i][colIndex + 1] !== undefined) {
+                            // تبدیل به عدد در صورت امکان
+                            const population = typeof jsonData[i][colIndex + 1] === 'number' ? 
+                                jsonData[i][colIndex + 1] : 
+                                parseInt(jsonData[i][colIndex + 1].toString().replace(/,/g, ''));
+                            
+                            if (!isNaN(population)) {
+                                populationData[country][year] = population;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // انتخاب 5 کشور اول به صورت پیش‌فرض
+            selectedCountries = availableCountries.slice(0, Math.min(5, availableCountries.length));
+            
+            // به روزرسانی رابط کاربری
+            updateCountryList();
+            updateAllCharts();
+            
+            alert(`Data successfully loaded from Excel file! ${availableCountries.length} countries found.`);
+        }
+
+        // شبیه‌سازی بارگذاری داده
         function simulateDataLoad() {
+            showLoading(true);
+            
+            // لیست کشورهای پیش‌فرض
+            availableCountries = [
+                "United States", "China", "India", "Brazil", "Nigeria", 
+                "Indonesia", "Pakistan", "Bangladesh", "Russia", "Mexico",
+                "Japan", "Ethiopia", "Philippines", "Egypt", "Vietnam",
+                "DR Congo", "Turkey", "Iran", "Germany", "Thailand"
+            ];
+            
             // ایجاد داده‌های شبیه‌سازی شده برای همه کشورها
             availableCountries.forEach(country => {
                 // جمعیت اولیه در سال 1960
@@ -239,14 +392,19 @@
                 }
             });
             
+            // انتخاب 5 کشور اول به صورت پیش‌فرض
+            selectedCountries = availableCountries.slice(0, 5);
+            
             // به روزرسانی لیست کشورها در رابط کاربری
             updateCountryList();
             
             // به روزرسانی همه نمودارها
             updateAllCharts();
             
+            showLoading(false);
+            
             // نمایش پیام موفقیت
-            alert("Data successfully loaded! Now displaying population data for 20 countries.");
+            alert("Simulated data successfully loaded! Now displaying population data for 20 countries.");
         }
 
         // به روزرسانی لیست کشورها در کنترل‌ها
@@ -326,7 +484,7 @@
             selectedCountries.forEach(country => {
                 const colorBox = document.createElement('div');
                 colorBox.className = 'country-color';
-                colorBox.style.backgroundColor = countryColors[country];
+                colorBox.style.backgroundColor = countryColors[country] || getRandomColor();
                 
                 const tag = document.createElement('div');
                 tag.className = 'country-tag';
@@ -349,6 +507,16 @@
             });
         }
 
+        // تولید رنگ تصادفی برای کشورهایی که رنگ ثابت ندارند
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
         // خلاصه داده‌ها
         function updateDataSummary() {
             const summaryDiv = document.getElementById('data-summary');
@@ -362,16 +530,20 @@
             selectedCountries.forEach(country => {
                 if (!populationData[country]) return;
                 
-                const pop1960 = populationData[country][1960];
-                const pop2023 = populationData[country][2023];
-                const growth = ((pop2023 - pop1960) / pop1960) * 100;
+                const years = Object.keys(populationData[country]).map(Number).sort((a, b) => a - b);
+                const firstYear = years[0];
+                const lastYear = years[years.length - 1];
+                
+                const popFirst = populationData[country][firstYear];
+                const popLast = populationData[country][lastYear];
+                const growth = ((popLast - popFirst) / popFirst) * 100;
                 
                 html += `
                     <div class="mb-2 pb-2 border-bottom">
                         <strong>${country}:</strong>
                         <div class="ms-3">
-                            <div>1960: ${pop1960.toLocaleString()}</div>
-                            <div>2023: ${pop2023.toLocaleString()}</div>
+                            <div>${firstYear}: ${popFirst.toLocaleString()}</div>
+                            <div>${lastYear}: ${popLast.toLocaleString()}</div>
                             <div class="fw-bold ${growth >= 0 ? 'text-success' : 'text-danger'}">
                                 Growth: ${growth.toFixed(1)}%
                             </div>
@@ -404,8 +576,8 @@
                     y: values,
                     name: country,
                     mode: 'lines+markers',
-                    line: { width: 3, color: countryColors[country] },
-                    marker: { size: 6, color: countryColors[country] }
+                    line: { width: 3, color: countryColors[country] || getRandomColor() },
+                    marker: { size: 6, color: countryColors[country] || getRandomColor() }
                 };
             });
             
@@ -433,9 +605,13 @@
                 return;
             }
             
-            const values = selectedCountries.map(country => populationData[country][2023]);
+            // پیدا کردن آخرین سال موجود در داده‌ها
+            const years = Object.keys(populationData[selectedCountries[0]]).map(Number).sort((a, b) => a - b);
+            const lastYear = years[years.length - 1];
+            
+            const values = selectedCountries.map(country => populationData[country][lastYear]);
             const labels = selectedCountries;
-            const colors = selectedCountries.map(country => countryColors[country]);
+            const colors = selectedCountries.map(country => countryColors[country] || getRandomColor());
             
             const data = [{
                 values: values,
@@ -452,7 +628,8 @@
                 plot_bgcolor: 'white',
                 paper_bgcolor: 'white',
                 showlegend: false,
-                margin: { t: 0, b: 0, l: 0, r: 0 }
+                margin: { t: 0, b: 0, l: 0, r: 0 },
+                title: `Population Distribution (${lastYear})`
             };
             
             Plotly.newPlot('pie-chart', data, layout);
@@ -470,13 +647,18 @@
                 return;
             }
             
+            // پیدا کردن اولین و آخرین سال موجود در داده‌ها
+            const years = Object.keys(populationData[selectedCountries[0]]).map(Number).sort((a, b) => a - b);
+            const firstYear = years[0];
+            const lastYear = years[years.length - 1];
+            
             const growthValues = selectedCountries.map(country => {
-                const pop1960 = populationData[country][1960];
-                const pop2023 = populationData[country][2023];
-                return ((pop2023 - pop1960) / pop1960) * 100;
+                const popFirst = populationData[country][firstYear];
+                const popLast = populationData[country][lastYear];
+                return ((popLast - popFirst) / popFirst) * 100;
             });
             
-            const colors = selectedCountries.map(country => countryColors[country]);
+            const colors = selectedCountries.map(country => countryColors[country] || getRandomColor());
             
             const data = [{
                 x: growthValues,
@@ -489,7 +671,7 @@
             }];
             
             const layout = {
-                xaxis: { title: "Growth Since 1960 (%)" },
+                xaxis: { title: `Growth Since ${firstYear} (%)` },
                 yaxis: { title: "" },
                 plot_bgcolor: 'white',
                 paper_bgcolor: 'white'
@@ -498,7 +680,7 @@
             Plotly.newPlot('growth-chart', data, layout);
         }
 
-        // نمودار متحرک
+        // نمودار متحرک با اندازه حباب‌های بزرگتر
         function updateAnimatedChart() {
             if (Object.keys(populationData).length === 0) {
                 document.getElementById('animated-chart').innerHTML = '<div class="text-center p-5">Please load data first</div>';
@@ -510,17 +692,31 @@
                 return;
             }
             
-            // ایجاد داده‌های مصنوعی برای سال‌های بین 1960 تا 2023
+            // پیدا کردن سال‌های موجود
+            const years = Object.keys(populationData[selectedCountries[0]]).map(Number).sort((a, b) => a - b);
+            const firstYear = years[0];
+            const lastYear = years[years.length - 1];
+            
+            // پیدا کردن بیشترین جمعیت برای تنظیم مقیاس
+            let maxPopulation = 0;
+            selectedCountries.forEach(country => {
+                Object.values(populationData[country]).forEach(pop => {
+                    if (pop > maxPopulation) maxPopulation = pop;
+                });
+            });
+            
+            // ایجاد فریم‌های انیمیشن
             const frames = [];
-            for (let year = 1960; year <= 2023; year++) {
+            for (let year = firstYear; year <= lastYear; year++) {
                 const dataForYear = selectedCountries.map(country => {
                     return {
                         x: [year],
                         y: [populationData[country][year]],
                         mode: 'markers',
                         marker: {
-                            size: Math.sqrt(populationData[country][year]) / 10000,
-                            color: countryColors[country]
+                            size: Math.sqrt(populationData[country][year]) / Math.sqrt(maxPopulation) * 50 + 15, // اندازه حباب بزرگتر
+                            color: countryColors[country] || getRandomColor(),
+                            sizemode: 'diameter'
                         },
                         name: country,
                         text: [`${country}: ${populationData[country][year].toLocaleString()}`],
@@ -538,19 +734,34 @@
             const initialData = frames[0].data;
             
             const layout = {
-                xaxis: { range: [1960, 2023], title: "Year" },
-                yaxis: { range: [0, 1500000000], title: "Population" },
+                xaxis: { 
+                    range: [firstYear - 1, lastYear + 1], 
+                    title: "Year",
+                    tickmode: 'linear',
+                    dtick: 10
+                },
+                yaxis: { 
+                    range: [0, maxPopulation * 1.1], 
+                    title: "Population" 
+                },
                 plot_bgcolor: 'white',
                 paper_bgcolor: 'white',
                 updatemenus: [{
                     buttons: [
                         {
-                            args: [null, { frame: { duration: 50, redraw: false }, fromcurrent: true }],
+                            args: [null, { 
+                                frame: { duration: 100, redraw: false }, 
+                                fromcurrent: true,
+                                transition: { duration: 50 }
+                            }],
                             label: 'Play',
                             method: 'animate'
                         },
                         {
-                            args: [[null], { frame: { duration: 0, redraw: false }, mode: 'immediate' }],
+                            args: [[null], { 
+                                frame: { duration: 0, redraw: false }, 
+                                mode: 'immediate' 
+                            }],
                             label: 'Pause',
                             method: 'animate'
                         }
