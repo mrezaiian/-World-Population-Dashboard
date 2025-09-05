@@ -1,153 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌍 World Population Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Plotly -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
             background-color: #f8f9fa;
-            margin: 0;
-            padding: 20px;
             color: #2c3e50;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-        .chart {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-            width: 100%;
-        }
-        .controls {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 20px;
-            width: 300px;
-        }
-        .half-width {
-            width: calc(50% - 20px);
-        }
-        @media (max-width: 768px) {
-            .half-width {
-                width: 100%;
-            }
-        }
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .dashboard-header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
-            font-weight: bold;
-            margin: 5px;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        .select-all {
-            background-color: #3498db;
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+            border: none;
         }
-        .clear-all {
-            background-color: #e74c3c;
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #eaeaea;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0 !important;
         }
         .country-tag {
             display: inline-flex;
             align-items: center;
             margin: 5px;
-            padding: 5px 10px;
-            background-color: #f1f1f1;
-            border-radius: 15px;
+            padding: 5px 12px;
+            background-color: #f1f8ff;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #d0e2ff;
         }
         .country-color {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            margin-right: 5px;
+            margin-right: 7px;
+        }
+        .chart-container {
+            padding: 15px;
+            min-height: 400px;
+        }
+        .controls-card {
+            height: 100%;
+        }
+        .summary-box {
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .btn-action {
+            margin: 5px;
+            font-weight: 500;
+        }
+        .highlight-box {
+            background: linear-gradient(to right, #f8f9fa, #e9ecef);
+            border-left: 4px solid #0d6efd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🌍 World Population Dashboard</h1>
-        <p>Interactive visualization of global population trends (1960–2023)</p>
-    </div>
+    <header class="dashboard-header text-center">
+        <div class="container">
+            <h1 class="display-4 fw-bold">🌍 World Population Dashboard</h1>
+            <p class="lead">Interactive visualization of global population trends (1960–2023)</p>
+        </div>
+    </header>
 
     <div class="container">
-        <div class="controls">
-            <h3>📊 Controls</h3>
-            <label for="country-selector">Select Countries:</label>
-            <select id="country-selector" multiple style="width: 100%; height: 120px; margin: 10px 0;">
-                <option value="United States">United States</option>
-                <option value="China">China</option>
-                <option value="India">India</option>
-                <option value="Brazil">Brazil</option>
-                <option value="Nigeria">Nigeria</option>
-                <option value="Indonesia">Indonesia</option>
-                <option value="Pakistan">Pakistan</option>
-                <option value="Bangladesh">Bangladesh</option>
-                <option value="Russia">Russia</option>
-                <option value="Mexico">Mexico</option>
-            </select>
-            
-            <div style="margin: 15px 0;">
-                <button class="select-all" onclick="selectAll()">Select All</button>
-                <button class="clear-all" onclick="clearAll()">Clear All</button>
-            </div>
-            
-            <h3>📈 Data Summary</h3>
-            <div id="data-summary" style="font-size: 13px; background-color: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
-                Select countries to see data summary
+        <div class="highlight-box">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5>📊 Explore Global Population Data</h5>
+                    <p class="mb-0">Select countries from the list to compare their population trends over time. Data is simulated for demonstration purposes.</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <button class="btn btn-outline-primary" onclick="simulateDataLoad()">
+                        📁 Simulate Data Load
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div style="flex: 1;">
-            <div class="chart">
-                <h3>📈 Population Trends Over Time</h3>
-                <div id="population-chart" style="height: 400px;"></div>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card controls-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>📊 Controls</span>
+                        <div>
+                            <button class="btn btn-sm btn-primary btn-action" onclick="selectAll()">Select All</button>
+                            <button class="btn btn-sm btn-secondary btn-action" onclick="clearAll()">Clear All</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Filter Countries:</label>
+                            <input type="text" class="form-control" id="country-filter" placeholder="Type to filter..." onkeyup="filterCountries()">
+                        </div>
+                        
+                        <label class="form-label">Select Countries:</label>
+                        <div id="country-list" style="max-height: 200px; overflow-y: auto;" class="mb-3">
+                            <!-- Country list will be generated here -->
+                        </div>
+                        
+                        <div id="selected-countries-display" class="d-flex flex-wrap">
+                            <!-- Selected countries will appear here -->
+                        </div>
+                        
+                        <h5 class="mt-4">📈 Data Summary</h5>
+                        <div id="data-summary" class="summary-box">
+                            Select countries to see data summary
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-                <div class="chart half-width">
-                    <h3>📊 Population Distribution (2023)</h3>
-                    <div id="pie-chart" style="height: 300px;"></div>
+
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">📈 Population Trends Over Time</div>
+                    <div class="chart-container" id="population-chart"></div>
                 </div>
                 
-                <div class="chart half-width">
-                    <h3>🚀 Growth Since 1960 (%)</h3>
-                    <div id="growth-chart" style="height: 300px;"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">📊 Population Distribution (2023)</div>
+                            <div class="chart-container" id="pie-chart"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">🚀 Growth Since 1960 (%)</div>
+                            <div class="chart-container" id="growth-chart"></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="chart">
-                <h3>🎬 Animated Population Growth (1960-2023)</h3>
-                <div id="animated-chart" style="height: 500px;"></div>
+                
+                <div class="card">
+                    <div class="card-header">🎬 Animated Population Growth (1960-2023)</div>
+                    <div class="chart-container" id="animated-chart"></div>
+                </div>
             </div>
         </div>
     </div>
 
+    <footer class="mt-5 py-3 text-center text-muted">
+        <div class="container">
+            <p>World Population Dashboard &copy; 2023 | Simulated data for demonstration purposes</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        // داده‌های نمونه (در حالت واقعی از فایل CSV خوانده می‌شود)
-        const populationData = {
-            "United States": {1960: 180671000, 2023: 339996600},
-            "China": {1960: 667070000, 2023: 1425671000},
-            "India": {1960: 449480000, 2023: 1428623000},
-            "Brazil": {1960: 72179200, 2023: 216422400},
-            "Nigeria": {1960: 45138000, 2023: 223804600},
-            "Indonesia": {1960: 87793000, 2023: 277534100},
-            "Pakistan": {1960: 44965000, 2023: 240485700},
-            "Bangladesh": {1960: 48037000, 2023: 172954300},
-            "Russia": {1960: 119897000, 2023: 144444400},
-            "Mexico": {1960: 38174100, 2023: 128455600}
-        };
+        // داده‌های نمونه (شبیه‌سازی شده)
+        let populationData = {};
+        const availableCountries = [
+            "United States", "China", "India", "Brazil", "Nigeria", 
+            "Indonesia", "Pakistan", "Bangladesh", "Russia", "Mexico",
+            "Japan", "Ethiopia", "Philippines", "Egypt", "Vietnam",
+            "DR Congo", "Turkey", "Iran", "Germany", "Thailand"
+        ];
 
         // رنگ‌های ثابت برای هر کشور
         const countryColors = {
@@ -160,11 +199,109 @@
             "Pakistan": "#e377c2",
             "Bangladesh": "#7f7f7f",
             "Russia": "#bcbd22",
-            "Mexico": "#17becf"
+            "Mexico": "#17becf",
+            "Japan": "#aec7e8",
+            "Ethiopia": "#ffbb78",
+            "Philippines": "#98df8a",
+            "Egypt": "#ff9896",
+            "Vietnam": "#c5b0d5",
+            "DR Congo": "#c49c94",
+            "Turkey": "#f7b6d2",
+            "Iran": "#dbdb8d",
+            "Germany": "#9edae5",
+            "Thailand": "#393b79"
         };
 
         // کشورهای انتخاب شده
         let selectedCountries = ["United States", "China", "India", "Brazil", "Nigeria"];
+
+        // شبیه‌سازی بارگذاری داده از CSV
+        function simulateDataLoad() {
+            // ایجاد داده‌های شبیه‌سازی شده برای همه کشورها
+            availableCountries.forEach(country => {
+                // جمعیت اولیه در سال 1960
+                let basePopulation;
+                if (country === "China") basePopulation = 667070000;
+                else if (country === "India") basePopulation = 449480000;
+                else if (country === "United States") basePopulation = 180671000;
+                else basePopulation = Math.floor(Math.random() * 300000000) + 10000000;
+                
+                populationData[country] = {};
+                
+                // ایجاد داده برای هر سال از 1960 تا 2023
+                for (let year = 1960; year <= 2023; year++) {
+                    // رشد جمعیت بر اساس سال (شبیه‌سازی شده)
+                    const yearsFrom1960 = year - 1960;
+                    const growthRate = 0.01 + (Math.random() * 0.03); // نرخ رشد بین 1% تا 4%
+                    const population = Math.floor(basePopulation * Math.pow(1 + growthRate, yearsFrom1960));
+                    
+                    populationData[country][year] = population;
+                }
+            });
+            
+            // به روزرسانی لیست کشورها در رابط کاربری
+            updateCountryList();
+            
+            // به روزرسانی همه نمودارها
+            updateAllCharts();
+            
+            // نمایش پیام موفقیت
+            alert("Data successfully loaded! Now displaying population data for 20 countries.");
+        }
+
+        // به روزرسانی لیست کشورها در کنترل‌ها
+        function updateCountryList() {
+            const countryList = document.getElementById('country-list');
+            countryList.innerHTML = '';
+            
+            availableCountries.forEach(country => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" value="${country}" 
+                        id="check-${country}" ${selectedCountries.includes(country) ? 'checked' : ''}
+                        onchange="toggleCountry(this)">
+                    <label class="form-check-label" for="check-${country}">
+                        ${country}
+                    </label>
+                `;
+                
+                countryList.appendChild(div);
+            });
+        }
+
+        // فیلتر کردن کشورها
+        function filterCountries() {
+            const filterText = document.getElementById('country-filter').value.toLowerCase();
+            const checkboxes = document.querySelectorAll('#country-list .form-check');
+            
+            checkboxes.forEach(checkbox => {
+                const label = checkbox.querySelector('.form-check-label');
+                const countryName = label.textContent.toLowerCase();
+                
+                if (countryName.includes(filterText)) {
+                    checkbox.style.display = 'block';
+                } else {
+                    checkbox.style.display = 'none';
+                }
+            });
+        }
+
+        // تغییر وضعیت انتخاب کشور
+        function toggleCountry(checkbox) {
+            const country = checkbox.value;
+            
+            if (checkbox.checked) {
+                if (!selectedCountries.includes(country)) {
+                    selectedCountries.push(country);
+                }
+            } else {
+                selectedCountries = selectedCountries.filter(c => c !== country);
+            }
+            
+            updateAllCharts();
+        }
 
         // تابع برای به‌روزرسانی همه نمودارها
         function updateAllCharts() {
@@ -179,9 +316,13 @@
         // نمایش کشورهای انتخاب شده
         function updateSelectedCountriesDisplay() {
             const displayDiv = document.getElementById('selected-countries-display');
-            if (!displayDiv) return;
-            
             displayDiv.innerHTML = '';
+            
+            if (selectedCountries.length === 0) {
+                displayDiv.innerHTML = '<div class="text-muted">No countries selected</div>';
+                return;
+            }
+            
             selectedCountries.forEach(country => {
                 const colorBox = document.createElement('div');
                 colorBox.className = 'country-color';
@@ -192,6 +333,18 @@
                 tag.appendChild(colorBox);
                 tag.appendChild(document.createTextNode(country));
                 
+                // دکمه حذف
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn-close ms-2';
+                removeBtn.style.fontSize = '0.6rem';
+                removeBtn.onclick = function() {
+                    selectedCountries = selectedCountries.filter(c => c !== country);
+                    document.getElementById(`check-${country}`).checked = false;
+                    updateAllCharts();
+                };
+                
+                tag.appendChild(removeBtn);
                 displayDiv.appendChild(tag);
             });
         }
@@ -199,7 +352,6 @@
         // خلاصه داده‌ها
         function updateDataSummary() {
             const summaryDiv = document.getElementById('data-summary');
-            if (!summaryDiv) return;
             
             if (selectedCountries.length === 0) {
                 summaryDiv.innerHTML = "Select countries to see data summary";
@@ -208,18 +360,22 @@
             
             let html = '';
             selectedCountries.forEach(country => {
+                if (!populationData[country]) return;
+                
                 const pop1960 = populationData[country][1960];
                 const pop2023 = populationData[country][2023];
                 const growth = ((pop2023 - pop1960) / pop1960) * 100;
                 
                 html += `
-                    <div style="margin-bottom: 10px;">
+                    <div class="mb-2 pb-2 border-bottom">
                         <strong>${country}:</strong>
-                        <ul style="margin: 5px 0; padding-left: 20px;">
-                            <li>1960 Population: ${pop1960.toLocaleString()}</li>
-                            <li>2023 Population: ${pop2023.toLocaleString()}</li>
-                            <li>Growth: ${growth.toFixed(1)}%</li>
-                        </ul>
+                        <div class="ms-3">
+                            <div>1960: ${pop1960.toLocaleString()}</div>
+                            <div>2023: ${pop2023.toLocaleString()}</div>
+                            <div class="fw-bold ${growth >= 0 ? 'text-success' : 'text-danger'}">
+                                Growth: ${growth.toFixed(1)}%
+                            </div>
+                        </div>
                     </div>
                 `;
             });
@@ -229,6 +385,16 @@
 
         // نمودار جمعیت در طول زمان
         function updatePopulationChart() {
+            if (Object.keys(populationData).length === 0) {
+                document.getElementById('population-chart').innerHTML = '<div class="text-center p-5">Please load data first</div>';
+                return;
+            }
+            
+            if (selectedCountries.length === 0) {
+                document.getElementById('population-chart').innerHTML = '<div class="text-center p-5">Please select countries</div>';
+                return;
+            }
+            
             const traces = selectedCountries.map(country => {
                 const years = Object.keys(populationData[country]).map(Number).sort((a, b) => a - b);
                 const values = years.map(year => populationData[country][year]);
@@ -257,8 +423,13 @@
 
         // نمودار پای (توزیع جمعیت)
         function updatePieChart() {
+            if (Object.keys(populationData).length === 0) {
+                document.getElementById('pie-chart').innerHTML = '<div class="text-center p-5">Please load data first</div>';
+                return;
+            }
+            
             if (selectedCountries.length === 0) {
-                document.getElementById('pie-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                document.getElementById('pie-chart').innerHTML = '<div class="text-center p-5">Please select countries</div>';
                 return;
             }
             
@@ -271,13 +442,17 @@
                 labels: labels,
                 type: 'pie',
                 hole: 0.4,
-                marker: { colors: colors }
+                marker: { colors: colors },
+                textinfo: 'label+percent',
+                textposition: 'outside',
+                hoverinfo: 'label+value+percent'
             }];
             
             const layout = {
                 plot_bgcolor: 'white',
                 paper_bgcolor: 'white',
-                showlegend: false
+                showlegend: false,
+                margin: { t: 0, b: 0, l: 0, r: 0 }
             };
             
             Plotly.newPlot('pie-chart', data, layout);
@@ -285,8 +460,13 @@
 
         // نمودار رشد
         function updateGrowthChart() {
+            if (Object.keys(populationData).length === 0) {
+                document.getElementById('growth-chart').innerHTML = '<div class="text-center p-5">Please load data first</div>';
+                return;
+            }
+            
             if (selectedCountries.length === 0) {
-                document.getElementById('growth-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                document.getElementById('growth-chart').innerHTML = '<div class="text-center p-5">Please select countries</div>';
                 return;
             }
             
@@ -303,7 +483,9 @@
                 y: selectedCountries,
                 type: 'bar',
                 orientation: 'h',
-                marker: { color: colors }
+                marker: { color: colors },
+                text: growthValues.map(v => v.toFixed(1) + '%'),
+                textposition: 'auto'
             }];
             
             const layout = {
@@ -318,8 +500,13 @@
 
         // نمودار متحرک
         function updateAnimatedChart() {
+            if (Object.keys(populationData).length === 0) {
+                document.getElementById('animated-chart').innerHTML = '<div class="text-center p-5">Please load data first</div>';
+                return;
+            }
+            
             if (selectedCountries.length === 0) {
-                document.getElementById('animated-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                document.getElementById('animated-chart').innerHTML = '<div class="text-center p-5">Please select countries</div>';
                 return;
             }
             
@@ -327,22 +514,16 @@
             const frames = [];
             for (let year = 1960; year <= 2023; year++) {
                 const dataForYear = selectedCountries.map(country => {
-                    // محاسبه جمعیت برای سال‌های بینابینی با درون‌یابی خطی
-                    const pop1960 = populationData[country][1960];
-                    const pop2023 = populationData[country][2023];
-                    const fraction = (year - 1960) / (2023 - 1960);
-                    const population = pop1960 + fraction * (pop2023 - pop1960);
-                    
                     return {
                         x: [year],
-                        y: [population],
+                        y: [populationData[country][year]],
                         mode: 'markers',
                         marker: {
-                            size: Math.sqrt(population) / 10000,
+                            size: Math.sqrt(populationData[country][year]) / 10000,
                             color: countryColors[country]
                         },
                         name: country,
-                        text: [`${country}: ${Math.round(population).toLocaleString()}`],
+                        text: [`${country}: ${populationData[country][year].toLocaleString()}`],
                         hoverinfo: 'text'
                     };
                 });
@@ -382,15 +563,6 @@
                     xanchor: 'right',
                     y: 0,
                     yanchor: 'top'
-                }],
-                sliders: [{
-                    steps: frames.map((frame, i) => ({
-                        args: [frame.name, { frame: { duration: 0, redraw: false }, mode: 'immediate' }],
-                        label: (1960 + i).toString(),
-                        method: 'animate'
-                    })),
-                    x: 0.1,
-                    len: 0.9
                 }]
             };
             
@@ -401,38 +573,34 @@
 
         // انتخاب همه کشورها
         function selectAll() {
-            const selector = document.getElementById('country-selector');
-            selectedCountries = Array.from(selector.options).map(option => option.value);
+            selectedCountries = [...availableCountries];
+            
+            // به روزرسانی چک‌باکس‌ها
+            const checkboxes = document.querySelectorAll('#country-list .form-check-input');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            
             updateAllCharts();
         }
 
         // پاک کردن همه انتخاب‌ها
         function clearAll() {
             selectedCountries = [];
+            
+            // به روزرسانی چک‌باکس‌ها
+            const checkboxes = document.querySelectorAll('#country-list .form-check-input');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
             updateAllCharts();
         }
 
         // مقداردهی اولیه
         document.addEventListener('DOMContentLoaded', function() {
-            // مقداردهی اولیه انتخاب کشورها
-            const selector = document.getElementById('country-selector');
-            Array.from(selector.options).forEach(option => {
-                if (selectedCountries.includes(option.value)) {
-                    option.selected = true;
-                }
-            });
-            
-            // اضافه کردن event listener برای تغییر انتخاب‌ها
-            selector.addEventListener('change', function() {
-                selectedCountries = Array.from(this.selectedOptions).map(option => option.value);
-                updateAllCharts();
-            });
-            
-            // ایجاد نمایش کشورهای انتخاب شده
-            const selectedCountriesContainer = document.createElement('div');
-            selectedCountriesContainer.id = 'selected-countries-display';
-            selectedCountriesContainer.style.cssText = 'padding: 10px; margin-bottom: 20px; background-color: #f8f9fa; border-radius: 5px; display: flex; flex-wrap: wrap; justify-content: center;';
-            selector.parentNode.insertBefore(selectedCountriesContainer, selector.nextSibling);
+            // ایجاد لیست کشورها در کنترل‌ها
+            updateCountryList();
             
             // به‌روزرسانی اولیه همه نمودارها
             updateAllCharts();
