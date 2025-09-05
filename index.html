@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🌍 World Population Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            color: #2c3e50;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .chart {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        .controls {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 300px;
+        }
+        .half-width {
+            width: calc(50% - 20px);
+        }
+        @media (max-width: 768px) {
+            .half-width {
+                width: 100%;
+            }
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .select-all {
+            background-color: #3498db;
+        }
+        .clear-all {
+            background-color: #e74c3c;
+        }
+        .country-tag {
+            display: inline-flex;
+            align-items: center;
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #f1f1f1;
+            border-radius: 15px;
+        }
+        .country-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 World Population Dashboard</h1>
+        <p>Interactive visualization of global population trends (1960–2023)</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h3>📊 Controls</h3>
+            <label for="country-selector">Select Countries:</label>
+            <select id="country-selector" multiple style="width: 100%; height: 120px; margin: 10px 0;">
+                <option value="United States">United States</option>
+                <option value="China">China</option>
+                <option value="India">India</option>
+                <option value="Brazil">Brazil</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="Indonesia">Indonesia</option>
+                <option value="Pakistan">Pakistan</option>
+                <option value="Bangladesh">Bangladesh</option>
+                <option value="Russia">Russia</option>
+                <option value="Mexico">Mexico</option>
+            </select>
+            
+            <div style="margin: 15px 0;">
+                <button class="select-all" onclick="selectAll()">Select All</button>
+                <button class="clear-all" onclick="clearAll()">Clear All</button>
+            </div>
+            
+            <h3>📈 Data Summary</h3>
+            <div id="data-summary" style="font-size: 13px; background-color: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+                Select countries to see data summary
+            </div>
+        </div>
+
+        <div style="flex: 1;">
+            <div class="chart">
+                <h3>📈 Population Trends Over Time</h3>
+                <div id="population-chart" style="height: 400px;"></div>
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                <div class="chart half-width">
+                    <h3>📊 Population Distribution (2023)</h3>
+                    <div id="pie-chart" style="height: 300px;"></div>
+                </div>
+                
+                <div class="chart half-width">
+                    <h3>🚀 Growth Since 1960 (%)</h3>
+                    <div id="growth-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+            
+            <div class="chart">
+                <h3>🎬 Animated Population Growth (1960-2023)</h3>
+                <div id="animated-chart" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // داده‌های نمونه (در حالت واقعی از فایل CSV خوانده می‌شود)
+        const populationData = {
+            "United States": {1960: 180671000, 2023: 339996600},
+            "China": {1960: 667070000, 2023: 1425671000},
+            "India": {1960: 449480000, 2023: 1428623000},
+            "Brazil": {1960: 72179200, 2023: 216422400},
+            "Nigeria": {1960: 45138000, 2023: 223804600},
+            "Indonesia": {1960: 87793000, 2023: 277534100},
+            "Pakistan": {1960: 44965000, 2023: 240485700},
+            "Bangladesh": {1960: 48037000, 2023: 172954300},
+            "Russia": {1960: 119897000, 2023: 144444400},
+            "Mexico": {1960: 38174100, 2023: 128455600}
+        };
+
+        // رنگ‌های ثابت برای هر کشور
+        const countryColors = {
+            "United States": "#1f77b4",
+            "China": "#ff7f0e",
+            "India": "#2ca02c",
+            "Brazil": "#d62728",
+            "Nigeria": "#9467bd",
+            "Indonesia": "#8c564b",
+            "Pakistan": "#e377c2",
+            "Bangladesh": "#7f7f7f",
+            "Russia": "#bcbd22",
+            "Mexico": "#17becf"
+        };
+
+        // کشورهای انتخاب شده
+        let selectedCountries = ["United States", "China", "India", "Brazil", "Nigeria"];
+
+        // تابع برای به‌روزرسانی همه نمودارها
+        function updateAllCharts() {
+            updateSelectedCountriesDisplay();
+            updateDataSummary();
+            updatePopulationChart();
+            updatePieChart();
+            updateGrowthChart();
+            updateAnimatedChart();
+        }
+
+        // نمایش کشورهای انتخاب شده
+        function updateSelectedCountriesDisplay() {
+            const displayDiv = document.getElementById('selected-countries-display');
+            if (!displayDiv) return;
+            
+            displayDiv.innerHTML = '';
+            selectedCountries.forEach(country => {
+                const colorBox = document.createElement('div');
+                colorBox.className = 'country-color';
+                colorBox.style.backgroundColor = countryColors[country];
+                
+                const tag = document.createElement('div');
+                tag.className = 'country-tag';
+                tag.appendChild(colorBox);
+                tag.appendChild(document.createTextNode(country));
+                
+                displayDiv.appendChild(tag);
+            });
+        }
+
+        // خلاصه داده‌ها
+        function updateDataSummary() {
+            const summaryDiv = document.getElementById('data-summary');
+            if (!summaryDiv) return;
+            
+            if (selectedCountries.length === 0) {
+                summaryDiv.innerHTML = "Select countries to see data summary";
+                return;
+            }
+            
+            let html = '';
+            selectedCountries.forEach(country => {
+                const pop1960 = populationData[country][1960];
+                const pop2023 = populationData[country][2023];
+                const growth = ((pop2023 - pop1960) / pop1960) * 100;
+                
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <strong>${country}:</strong>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            <li>1960 Population: ${pop1960.toLocaleString()}</li>
+                            <li>2023 Population: ${pop2023.toLocaleString()}</li>
+                            <li>Growth: ${growth.toFixed(1)}%</li>
+                        </ul>
+                    </div>
+                `;
+            });
+            
+            summaryDiv.innerHTML = html;
+        }
+
+        // نمودار جمعیت در طول زمان
+        function updatePopulationChart() {
+            const traces = selectedCountries.map(country => {
+                const years = Object.keys(populationData[country]).map(Number).sort((a, b) => a - b);
+                const values = years.map(year => populationData[country][year]);
+                
+                return {
+                    x: years,
+                    y: values,
+                    name: country,
+                    mode: 'lines+markers',
+                    line: { width: 3, color: countryColors[country] },
+                    marker: { size: 6, color: countryColors[country] }
+                };
+            });
+            
+            const layout = {
+                xaxis: { title: "Year", tickmode: 'linear', dtick: 10 },
+                yaxis: { title: "Population" },
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                hovermode: 'closest',
+                legend: { orientation: "h", yanchor: "bottom", y: 1.02, xanchor: "right", x: 1 }
+            };
+            
+            Plotly.newPlot('population-chart', traces, layout);
+        }
+
+        // نمودار پای (توزیع جمعیت)
+        function updatePieChart() {
+            if (selectedCountries.length === 0) {
+                document.getElementById('pie-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                return;
+            }
+            
+            const values = selectedCountries.map(country => populationData[country][2023]);
+            const labels = selectedCountries;
+            const colors = selectedCountries.map(country => countryColors[country]);
+            
+            const data = [{
+                values: values,
+                labels: labels,
+                type: 'pie',
+                hole: 0.4,
+                marker: { colors: colors }
+            }];
+            
+            const layout = {
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                showlegend: false
+            };
+            
+            Plotly.newPlot('pie-chart', data, layout);
+        }
+
+        // نمودار رشد
+        function updateGrowthChart() {
+            if (selectedCountries.length === 0) {
+                document.getElementById('growth-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                return;
+            }
+            
+            const growthValues = selectedCountries.map(country => {
+                const pop1960 = populationData[country][1960];
+                const pop2023 = populationData[country][2023];
+                return ((pop2023 - pop1960) / pop1960) * 100;
+            });
+            
+            const colors = selectedCountries.map(country => countryColors[country]);
+            
+            const data = [{
+                x: growthValues,
+                y: selectedCountries,
+                type: 'bar',
+                orientation: 'h',
+                marker: { color: colors }
+            }];
+            
+            const layout = {
+                xaxis: { title: "Growth Since 1960 (%)" },
+                yaxis: { title: "" },
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white'
+            };
+            
+            Plotly.newPlot('growth-chart', data, layout);
+        }
+
+        // نمودار متحرک
+        function updateAnimatedChart() {
+            if (selectedCountries.length === 0) {
+                document.getElementById('animated-chart').innerHTML = '<p style="text-align: center;">Please select countries</p>';
+                return;
+            }
+            
+            // ایجاد داده‌های مصنوعی برای سال‌های بین 1960 تا 2023
+            const frames = [];
+            for (let year = 1960; year <= 2023; year++) {
+                const dataForYear = selectedCountries.map(country => {
+                    // محاسبه جمعیت برای سال‌های بینابینی با درون‌یابی خطی
+                    const pop1960 = populationData[country][1960];
+                    const pop2023 = populationData[country][2023];
+                    const fraction = (year - 1960) / (2023 - 1960);
+                    const population = pop1960 + fraction * (pop2023 - pop1960);
+                    
+                    return {
+                        x: [year],
+                        y: [population],
+                        mode: 'markers',
+                        marker: {
+                            size: Math.sqrt(population) / 10000,
+                            color: countryColors[country]
+                        },
+                        name: country,
+                        text: [`${country}: ${Math.round(population).toLocaleString()}`],
+                        hoverinfo: 'text'
+                    };
+                });
+                
+                frames.push({
+                    name: year.toString(),
+                    data: dataForYear
+                });
+            }
+            
+            // ایجاد نمودار اولیه
+            const initialData = frames[0].data;
+            
+            const layout = {
+                xaxis: { range: [1960, 2023], title: "Year" },
+                yaxis: { range: [0, 1500000000], title: "Population" },
+                plot_bgcolor: 'white',
+                paper_bgcolor: 'white',
+                updatemenus: [{
+                    buttons: [
+                        {
+                            args: [null, { frame: { duration: 50, redraw: false }, fromcurrent: true }],
+                            label: 'Play',
+                            method: 'animate'
+                        },
+                        {
+                            args: [[null], { frame: { duration: 0, redraw: false }, mode: 'immediate' }],
+                            label: 'Pause',
+                            method: 'animate'
+                        }
+                    ],
+                    direction: 'left',
+                    pad: { r: 10, t: 87 },
+                    showactive: false,
+                    type: 'buttons',
+                    x: 0.1,
+                    xanchor: 'right',
+                    y: 0,
+                    yanchor: 'top'
+                }],
+                sliders: [{
+                    steps: frames.map((frame, i) => ({
+                        args: [frame.name, { frame: { duration: 0, redraw: false }, mode: 'immediate' }],
+                        label: (1960 + i).toString(),
+                        method: 'animate'
+                    })),
+                    x: 0.1,
+                    len: 0.9
+                }]
+            };
+            
+            Plotly.newPlot('animated-chart', initialData, layout).then(() => {
+                Plotly.addFrames('animated-chart', frames);
+            });
+        }
+
+        // انتخاب همه کشورها
+        function selectAll() {
+            const selector = document.getElementById('country-selector');
+            selectedCountries = Array.from(selector.options).map(option => option.value);
+            updateAllCharts();
+        }
+
+        // پاک کردن همه انتخاب‌ها
+        function clearAll() {
+            selectedCountries = [];
+            updateAllCharts();
+        }
+
+        // مقداردهی اولیه
+        document.addEventListener('DOMContentLoaded', function() {
+            // مقداردهی اولیه انتخاب کشورها
+            const selector = document.getElementById('country-selector');
+            Array.from(selector.options).forEach(option => {
+                if (selectedCountries.includes(option.value)) {
+                    option.selected = true;
+                }
+            });
+            
+            // اضافه کردن event listener برای تغییر انتخاب‌ها
+            selector.addEventListener('change', function() {
+                selectedCountries = Array.from(this.selectedOptions).map(option => option.value);
+                updateAllCharts();
+            });
+            
+            // ایجاد نمایش کشورهای انتخاب شده
+            const selectedCountriesContainer = document.createElement('div');
+            selectedCountriesContainer.id = 'selected-countries-display';
+            selectedCountriesContainer.style.cssText = 'padding: 10px; margin-bottom: 20px; background-color: #f8f9fa; border-radius: 5px; display: flex; flex-wrap: wrap; justify-content: center;';
+            selector.parentNode.insertBefore(selectedCountriesContainer, selector.nextSibling);
+            
+            // به‌روزرسانی اولیه همه نمودارها
+            updateAllCharts();
+        });
+    </script>
+</body>
+</html>
